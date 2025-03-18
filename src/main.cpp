@@ -18,7 +18,7 @@ void motion_wrapper(int x, int y);
 
 int main(int argc, char **argv) {
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowSize(WINDOW_SIDE_LENGTH, WINDOW_SIDE_LENGTH);
     glutInitWindowPosition(100, 100);
     glutCreateWindow(argv[0]);

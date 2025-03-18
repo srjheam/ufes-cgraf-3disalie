@@ -56,11 +56,34 @@ class Game::Impl {
         /* selecionar cor de fundo (azul rgb(158 158 255)) */
         glClearColor(0.620f, 0.620f, 1.0f, 1.0f);
 
+        //glShadeModel (GL_FLAT);
+        glShadeModel(GL_SMOOTH);
+        glEnable(GL_CULL_FACE);
+        glEnable(GL_LIGHTING);
+        glEnable(GL_LIGHT0);
+        glEnable(GL_LIGHT1);
+        glEnable(GL_LIGHT2);
+        glEnable(GL_DEPTH_TEST);
+        glViewport(0, 0, (GLsizei)windowSideLength_, (GLsizei)windowSideLength_);
+        
+        GLfloat light_ambient[] = { 0.05f, 0.05f, 0.05f, 1.0f };
+        GLfloat light_diffuse[] = { 0.4f, 0.4f, 0.4f, 1.0f };  
+        GLfloat light_specular[] = { 0.2f, 0.2f, 0.2f, 1.0f }; 
+    
+        for (int i = 0; i < 3; i++) {
+            glLightfv(GL_LIGHT0 + i, GL_AMBIENT, light_ambient);
+            glLightfv(GL_LIGHT0 + i, GL_DIFFUSE, light_diffuse);
+            glLightfv(GL_LIGHT0 + i, GL_SPECULAR, light_specular);
+        }
+
+        glEnable(GL_NORMALIZE);
+
         /* inicializar sistema de visualizacao */
         glMatrixMode(GL_PROJECTION);
-        glOrtho(0.0, windowSideLength_, 0.0, windowSideLength_, -100.0, 100.0);
-        glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
+
+        //glOrtho(0.0, windowSideLength_, 0.0, windowSideLength_, -100.0, 100.0);
+        gluPerspective(60, (GLfloat)windowSideLength_ / (GLfloat)windowSideLength_, .1, 1000000);
     }
 
     bool checkEndGame() {
@@ -133,7 +156,7 @@ class Game::Impl {
         min_deltas_check_all_zero(arena_->players(), dx, dy);
 
         // colision walls
-        auto &wall = arena_->background();
+        auto &wall = arena_->boundaries();
         if (!entity.aabb_isinsideof_dx(wall, dx)) {
             entity.colisions_set_last_x(wall);
             //character.jump_end();
@@ -199,12 +222,12 @@ class Game::Impl {
         // =============== movement
         // set up player movement vector
         const auto &player = arena_->player();
-        if (keyboardKeyPressed_['a'] || keyboardKeyPressed_['A'])
+        if (keyboardKeyPressed_['s'] || keyboardKeyPressed_['s'])
             player.vector_sum(-1.0f, 0.0f, characters_speed_px_s_);
-        else if (keyboardKeyPressed_['d'] || keyboardKeyPressed_['D'])
+        else if (keyboardKeyPressed_['w'] || keyboardKeyPressed_['W'])
             player.vector_sum(1.0f, 0.0f, characters_speed_px_s_);
         
-        if (mouseButtonPressed_[GLUT_RIGHT_BUTTON]) {
+        if (mouseButtonPressed_[GLUT_RIGHT_BUTTON] || keyboardKeyPressed_[' ']) {
             if (player.jump_can_they()) {
                 if (!player.jumping())
                     player.jump_start();
@@ -242,7 +265,7 @@ class Game::Impl {
 
         player.vector_save_current_set_zero();
 
-        if (player.colisions_last_right() == &arena_->background())
+        if (player.colisions_last_right() == &arena_->boundaries())
             status_ = GameStatus::WON;
 
         // ====================== gun
@@ -275,9 +298,9 @@ class Game::Impl {
             // set up player gravity
             foe.vector_sum(0.0f, -1.0f, gravity_px_s_);
 
-            if (foe.colisions_last_bottom() != nullptr && foe.colisions_last_bottom() != &arena_->background()) {
+            if (foe.colisions_last_bottom() != nullptr && foe.colisions_last_bottom() != &arena_->boundaries()) {
                 auto dx = foe.vector_current().calc_dx_dt(dt / 1000.0f);
-                auto dy = foe.vector_current().calc_dy_dt(dt / 1000.0f);
+                //auto dy = foe.vector_current().calc_dy_dt(dt / 1000.0f);
 
                 auto platform = foe.colisions_last_bottom();
 
@@ -288,7 +311,7 @@ class Game::Impl {
                 auto x = foe.vector_current().direction_x() * scale * foe.vector_current().velocity();
                 auto y = foe.vector_current().direction_y() * scale * foe.vector_current().velocity();
 
-                std::cout << "dx: " << dx << " dy: " << dy << " max_mov: " << max_mov << " ndx: " << ndx << " scale: " << scale << std::endl << std::endl;
+                //std::cout << "dx: " << dx << " dy: " << dy << " max_mov: " << max_mov << " ndx: " << ndx << " scale: " << scale << std::endl << std::endl;
 
                 foe.vector_current().set_vector(x, y);
 
@@ -319,25 +342,40 @@ class Game::Impl {
         }
     }
 
-    void drawInfo() {
-        glLoadIdentity();
-    
-        glColor3f(.059f, .741f, .059f); // rgb(15, 189, 15)
+    void lookAtPlayer() {
+        const auto &player = arena_->player();
 
-        glRasterPos2f(windowSideLength_ - 165, windowSideLength_ - 25);
-        const char* tmove = "Press A, D to move";
-        for (const char* c = tmove; *c != '\0'; c++)
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
+        gluLookAt(
+            player.o_x() - 3 * player.height(), player.o_y() + player.width(), player.o_z(),
+            player.o_x() + player.depth(), player.o_y() + player.height() / 2, player.o_z(),
+            0, 1, 0
+        );
+    }
 
-        glRasterPos2f(windowSideLength_ - 165, windowSideLength_ - 50);
-        const char* tjump = "Press RMB to jump";
-        for (const char* c = tjump; *c != '\0'; c++)
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);        
+    void lightUp() {
+        const int light_count = 3;
 
-        glRasterPos2f(windowSideLength_ - 150, windowSideLength_ - 75);
-        const char* trestart = "Press R to restart";
-        for (const char* c = trestart; *c != '\0'; c++)
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
+        const auto gap = this->arena_->width() / (light_count + 1);
+        const GLfloat light_position[][4] = {
+            { gap, this->arena_->height() - 10, 0, 1.0 },
+            { gap * 2, this->arena_->height() - 10, 0, 1.0 },
+            { gap * 3, this->arena_->height() - 10, 0, 1.0 }
+        };
+        
+        for (int i = 0; i < light_count; i++) {
+            glPushMatrix();
+                // Position light before any other transformations
+                glLightfv(GL_LIGHT0 + i, GL_POSITION, light_position[i]);
+                
+                glDisable(GL_LIGHTING);
+                    glPushMatrix();
+                        glTranslatef(light_position[i][0], light_position[i][1], light_position[i][2]);
+                        glColor3f(1.0, 1 * 0.8, 1 * 0.4); // Red-orange flash
+                        glutSolidCube(.2);
+                    glPopMatrix();
+                glEnable(GL_LIGHTING);
+            glPopMatrix();
+        }
     }
 };
 
@@ -365,59 +403,72 @@ bool Game::start() {
 void Game::display(void) {
     /* selecionar cor de fundo (azul rgb(158,158,255)) */
     glClearColor(0.620f, 0.620f, 1.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // a model-view está ativa
-
+    glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    if (pimpl->status_ == GameStatus::WON) {
-        glColor3f(.059f, .741f, .059f); // rgb(15, 189, 15)
-        glRasterPos2f(pimpl->windowSideLength_/2.0f - 40, pimpl->windowSideLength_/2.0f);
-        const char* twink = "You win!";
-        for (const char* c = twink; *c != '\0'; c++)
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
+    if (pimpl->status_ != GameStatus::RUNNING) {
+        glMatrixMode(GL_PROJECTION);
+        glPushMatrix();
+            glLoadIdentity();
+            glOrtho(0, pimpl->windowSideLength_, 0, pimpl->windowSideLength_, -1, 1);
+            
+            glMatrixMode(GL_MODELVIEW);
+            glLoadIdentity();
+            
+            // Disable lighting for text drawing
+            glDisable(GL_LIGHTING);
+            glDisable(GL_DEPTH_TEST);
 
-        glColor3f(1.f, 1.f, 1.f); // rgb(255, 255, 255)
-        glRasterPos2f(pimpl->windowSideLength_/2.0f - 60, 10);
-        const char* tr = "Press R to restart";
-        for (const char* c = tr; *c != '\0'; c++)
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
+                if (pimpl->status_ == GameStatus::WON) {
+                    glColor3f(.059f, .741f, .059f); // rgb(15, 189, 15)
+                    glRasterPos2f(pimpl->windowSideLength_/2.0f - 40, pimpl->windowSideLength_/2.0f);
+                    const char* twink = "You win!";
+                    for (const char* c = twink; *c != '\0'; c++)
+                        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
+
+                    glColor3f(1.f, 1.f, 1.f); // rgb(255, 255, 255)
+                    glRasterPos2f(pimpl->windowSideLength_/2.0f - 60, 10);
+                    const char* tr = "Press R to restart";
+                    for (const char* c = tr; *c != '\0'; c++)
+                        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
+                }
+                else if (pimpl->status_ == GameStatus::OVER) {
+                    /* selecionar cor de fundo (azul rgb(46, 42, 67)) */
+                    glClearColor(0.180f, 0.165f, .263f, 1.0f);
+                    glClear(GL_COLOR_BUFFER_BIT);
+
+                    glColor3f(.741f, .059f, .059f); // rgb(189, 15, 15)
+                    glRasterPos2f(pimpl->windowSideLength_/2.0f - 40, pimpl->windowSideLength_/2.0f);
+                    const char* tgameover = "SE FODEU";
+                    for (const char* c = tgameover; *c != '\0'; c++)
+                        glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, *c);
+
+                    glColor3f(1.f, 1.f, 1.f); // rgb(255, 255, 255)
+                    glRasterPos2f(pimpl->windowSideLength_/2.0f - 60, 10);
+                    const char* tr = "Press R to restart";
+                    for (const char* c = tr; *c != '\0'; c++)
+                        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
+                }
+
+            glEnable(GL_LIGHTING);
+            glEnable(GL_DEPTH_TEST);
+            
+            glMatrixMode(GL_PROJECTION);
+        glPopMatrix();
+        glMatrixMode(GL_MODELVIEW);
 
         glutSwapBuffers();
 
         return;
     }
-    else if (pimpl->status_ == GameStatus::OVER) {
-        /* selecionar cor de fundo (azul rgb(46, 42, 67)) */
-        glClearColor(0.180f, 0.165f, .263f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
 
-        glColor3f(.741f, .059f, .059f); // rgb(189, 15, 15)
-        glRasterPos2f(pimpl->windowSideLength_/2.0f - 40, pimpl->windowSideLength_/2.0f);
-        const char* tgameover = "SE FODEU";
-        for (const char* c = tgameover; *c != '\0'; c++)
-            glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, *c);
+    pimpl->lookAtPlayer();
 
-        glColor3f(1.f, 1.f, 1.f); // rgb(255, 255, 255)
-        glRasterPos2f(pimpl->windowSideLength_/2.0f - 60, 10);
-        const char* tr = "Press R to restart";
-        for (const char* c = tr; *c != '\0'; c++)
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
-
-        glutSwapBuffers();
-
-        return;
-    }
-
-    // mover "camera"
-    float playerCenterX = pimpl->arena_->player().o_x() + pimpl->arena_->player().width()/2.0f;
-    float offsetX = pimpl->windowSideLength_/2.0f - playerCenterX;
-    glTranslatef(offsetX, 0, 0);
+    pimpl->lightUp();
 
     pimpl->arena_->draw();
-
-    pimpl->drawInfo();
 
     glutSwapBuffers();
 }

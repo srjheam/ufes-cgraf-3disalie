@@ -12,27 +12,58 @@ class Entity::Impl {
   public:
     GLfloat o_x_;
     GLfloat o_y_;
+    GLfloat o_z_;
 
-    int height_;
-    int width_;
+    GLfloat height_;
+    GLfloat width_;
+    GLfloat depth_;
 
     GLdouble ttl_;
     bool hidden_;
 
-    Vector lastVector_;
-    Vector currentVector_;
+    GLfloat terminalVelocityXZ_;
+    GLfloat terminalVelocityY_;
+
+    Vector3 lastVector_;
+    Vector3 currentVector_;
 
     const Entity *lastCollidedX_ = nullptr;
     const Entity *lastCollidedY_ = nullptr;
+    const Entity *lastCollidedZ_ = nullptr;
 
-    Impl(GLfloat o_x, GLfloat o_y, int height, int width)
-        : o_x_(o_x), o_y_(o_y), height_(height), width_(width),
-            ttl_(std::numeric_limits<GLdouble>::max()), hidden_(false),
-            lastVector_(), currentVector_() { }
+    Impl(
+        GLfloat o_x,
+        GLfloat o_y,
+        GLfloat o_z,
+        GLfloat width,
+        GLfloat height,
+        GLfloat depth,
+        GLfloat terminalVelocityXZ,
+        GLfloat terminalVelocityY
+        ) : o_x_(o_x),
+            o_y_(o_y),
+            o_z_(o_z),
+            height_(height),
+            width_(width),
+            depth_(depth),
+            ttl_(std::numeric_limits<GLdouble>::max()),
+            hidden_(false),
+            terminalVelocityXZ_(terminalVelocityXZ),
+            terminalVelocityY_(terminalVelocityY),
+            lastVector_(),
+            currentVector_() { }
 };
 
-Entity::Entity(GLfloat o_x, GLfloat o_y, int height, int width)
-    : pimpl(new Impl(o_x, o_y, height, width)) { }
+Entity::Entity(
+    GLfloat o_x,
+    GLfloat o_y,
+    GLfloat o_z,
+    GLfloat width,
+    GLfloat height,
+    GLfloat depth,
+    GLfloat terminalVelocityXZ,
+    GLfloat terminalVelocityY
+    ) : pimpl(new Impl(o_x, o_y, o_z, width, height, depth, terminalVelocityXZ, terminalVelocityY)) { }
 
 Entity::Entity(Entity&&) noexcept = default;
 
@@ -42,13 +73,16 @@ GLfloat Entity::o_x() const { return pimpl->o_x_; }
 
 GLfloat Entity::o_y() const { return pimpl->o_y_; }
 
-const int &Entity::height() const { return pimpl->height_; }
-const int &Entity::width() const { return pimpl->width_; }
+GLfloat Entity::o_z() const { return pimpl->o_z_; }
 
-const GLdouble &Entity::ttl() const { return pimpl->ttl_; }
+GLfloat Entity::height() const { return pimpl->height_; }
+GLfloat Entity::width() const { return pimpl->width_; }
+GLfloat Entity::depth() const { return pimpl->depth_; }
+
+GLdouble Entity::ttl() const { return pimpl->ttl_; }
 void Entity::ttl(const GLdouble &ttl) const { pimpl->ttl_ = ttl; }
 
-const bool &Entity::hidden() const { return pimpl->hidden_; }
+bool Entity::hidden() const { return pimpl->hidden_; }
 void Entity::hidden(const bool &hidden) const { pimpl->hidden_ = hidden; }
 
 void Entity::die() const { pimpl->ttl_ = -1.0; pimpl->hidden_ = true; }
@@ -58,11 +92,11 @@ void Entity::movement_translate(GLfloat dx, GLfloat dy) const {
     pimpl->o_y_ += dy;
 }
 
-const Vector &Entity::vector_last() const {
+const Vector3 &Entity::vector_last() const {
     return pimpl->lastVector_;
 }
 
-const Vector &Entity::vector_current() const {
+const Vector3 &Entity::vector_current() const {
     return pimpl->currentVector_;
 }
 
@@ -75,7 +109,7 @@ void Entity::vector_save_current_set_zero() const {
     pimpl->currentVector_.set_zero();
 }
 
-void Entity::vector_save_current_set(const Vector &vector) const {
+void Entity::vector_save_current_set(const Vector3 &vector) const {
     pimpl->lastVector_ = pimpl->currentVector_;
     pimpl->currentVector_ = vector;
 }

@@ -17,7 +17,14 @@ class Character : public Entity {
     std::unique_ptr<Impl> pimpl;
 
   public:
-    Character(GLfloat o_x, GLfloat o_y, int height, int width, ColorRgb body);
+    Character(
+      GLfloat o_x,
+      GLfloat o_y,
+      GLfloat o_z,
+      GLfloat width,
+      GLfloat height,
+      GLfloat depth,
+      ColorRgb body);
     
     Character(const Character&) = delete;
     Character& operator=(const Character&) = delete;
@@ -43,7 +50,7 @@ class Character : public Entity {
     bool shot_add_dt(GLdouble dt) const;
     Bullet shoot() const;
 
-    void draw() const;
+    void draw(bool draw_axes = false) const;
 };
 
 #endif

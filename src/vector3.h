@@ -3,7 +3,7 @@
 
 #include <memory>
 
-class Vector
+class Vector3
 {
     private:
         // PIMPL idiom
@@ -11,13 +11,13 @@ class Vector
         std::unique_ptr<Impl> pimpl;
 
     public:
-        Vector();
-        Vector(float dx, float dy);
-        Vector(const Vector&);
-        Vector& operator=(const Vector&);
-        Vector(Vector&&) noexcept;
-        Vector& operator=(Vector&&) noexcept;
-        ~Vector();
+        Vector3();
+        Vector3(float dx, float dy);
+        Vector3(const Vector3&);
+        Vector3& operator=(const Vector3&);
+        Vector3(Vector3&&) noexcept;
+        Vector3& operator=(Vector3&&) noexcept;
+        ~Vector3();
 
         float angle() const;
 
@@ -36,7 +36,7 @@ class Vector
 
         void set_zero() const;
 
-        //! Vector must be normalized
+        //! Vector3 must be normalized
         void sum(float dx, float dy, float velocity);
 
         float calc_dx_dt(float dt) const;

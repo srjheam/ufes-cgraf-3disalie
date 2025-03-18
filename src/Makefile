@@ -10,7 +10,7 @@ LIBTINYXML2DIRDEBUG   = $(LIBTINYXML2DIR)/build/debug
 
 SRCS = $(shell find . -type f -name '*.cpp' | sed 's|^./||')
 
-INCLUDES = -lGL -lGLU -lglut -lm -I $(LIBTINYXML2DIR)
+INCLUDES = -lGL -lGLU -lglut -lm -I $(LIBTINYXML2DIR) -I .
 
 VALGRINDOUT = valgrind-out.txt
 

@@ -1,17 +1,25 @@
-#ifndef RECTANGLE_H
-#define RECTANGLE_H
+#ifndef PLATFORM_H
+#define PLATFORM_H
 
 #include <GL/gl.h>
 
 #include "entity.h"
 #include "color_rgb.h"
 
+#include "shapes/box.h"
+
 class Platform : public Entity {
   private:
-    ColorRgb _background;
+    Box *_box;
 
   public:
-    Platform(GLfloat o_x, GLfloat o_y, int height, int width, ColorRgb background);
+    Platform(
+      GLfloat o_x,
+      GLfloat o_y,
+      GLfloat o_z,
+      GLfloat width,
+      GLfloat height,
+      GLfloat depth);
     
     Platform(const Platform&) = delete;
     Platform& operator=(const Platform&) = delete;
@@ -21,7 +29,7 @@ class Platform : public Entity {
 
     virtual ~Platform() override = default;
 
-    void draw() const;
+    void draw(bool draw_axes = false) const;
 };
 
 #endif

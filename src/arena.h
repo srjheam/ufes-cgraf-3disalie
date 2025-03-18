@@ -4,6 +4,7 @@
 #include <list>
 #include <vector>
 
+#include "boundary.h"
 #include "platform.h"
 #include "character.h"
 #include "bullet.h"
@@ -12,20 +13,16 @@
 
 class Arena {
     private:
-        int _height;
-        int _width;
-
-        Platform *_background;
-        std::vector<Platform> _platforms;
-        std::list<Character> _foes;
-        std::vector<Character> _players; // only one player
-        std::list<Bullet> _bullets;
+        // pimpl idiom
+        class Impl;
+        std::unique_ptr<Impl> pimpl;
 
     public:
-        const int &height() const;
-        const int &width() const;
+        const float &height() const;
+        const float &width() const;
+        const float &depth() const;
 
-        const Platform &background() const;
+        const Boundary &boundaries() const;
         const std::vector<Platform> &platforms() const;
         std::list<Character> &foes();
         const Character &player() const;
@@ -34,12 +31,12 @@ class Arena {
 
         void addBullet(Bullet &&bullet);
 
-        Arena(int height);
+        Arena(float height);
         ~Arena();
 
         float loadFrom(const char *doc);
 
-        void draw() const;
+        void draw(bool draw_axes = false) const;
 };
 
 #endif

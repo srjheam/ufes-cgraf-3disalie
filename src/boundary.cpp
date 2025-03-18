@@ -1,9 +1,10 @@
-#include "platform.h"
+#include "boundary.h"
+
 #include <GL/glut.h>
 #include "shapes/box.h"
 #include "color_rgb.h"
 
-Platform::Platform(
+Boundary::Boundary(
     GLfloat o_x,
     GLfloat o_y,
     GLfloat o_z,
@@ -29,10 +30,11 @@ Platform::Platform(
             },
             width,
             height,
-            depth
+            depth,
+            true
         )) { }
         
-void Platform::draw(bool draw_axes) const {
+void Boundary::draw(bool draw_axes) const {
     glPushMatrix();
         glTranslatef(o_x(), o_y(), o_z());
         glTranslatef(width() / 2, height() / 2, 0);

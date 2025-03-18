@@ -7,36 +7,103 @@
 
 #include "tinyxml2.h"
 
-Arena::Arena(int height) { _height = height; }
-Arena::~Arena() {
-    delete _background;
-}
+class Arena::Impl {
+    public:
+        float height_;
+        float width_;
+        float depth_;
 
-const int &Arena::height() const { return _height; }
-const int &Arena::width() const { return _width; }
+        Boundary *boundaries_;
+        std::vector<Platform> platforms_;
+        std::list<Character> foes_;
+        std::vector<Character> players_; // only one player
+        std::list<Bullet> bullets_;
 
-const Platform &Arena::background() const { return *_background; }
-const std::vector<Platform> &Arena::platforms() const { return _platforms; }
-std::list<Character> &Arena::foes() { return _foes; }
-const Character &Arena::player() const { return _players.front(); }
-const std::vector<Character> &Arena::players() const { return _players; }
-std::list<Bullet> &Arena::bullets() { return _bullets; }
+    Impl(float height) : height_(height) {}
+    ~Impl() {
+        delete boundaries_;
+    }
+};
 
-void Arena::addBullet(Bullet &&bullet) { _bullets.push_back(std::move(bullet)); }
+Arena::Arena(float height) : pimpl(std::make_unique<Impl>(height)) {}
+Arena::~Arena() = default;
 
-void Arena::draw() const {
-    _background->draw();
+const Boundary &Arena::boundaries() const { return *pimpl->boundaries_; }
+const float &Arena::height() const { return pimpl->height_; }
+const float &Arena::width() const { return pimpl->width_; }
+const float &Arena::depth() const { return pimpl->depth_; }
 
-    for (const Platform &platform : _platforms)
-        platform.draw();
+const std::vector<Platform> &Arena::platforms() const { return pimpl->platforms_; }
+std::list<Character> &Arena::foes() { return pimpl->foes_; }
+const Character &Arena::player() const { return pimpl->players_.front(); }
+const std::vector<Character> &Arena::players() const { return pimpl->players_; }
+std::list<Bullet> &Arena::bullets() { return pimpl->bullets_; }
 
-    for (const Character &foe : _foes)
-        foe.draw();
+void Arena::addBullet(Bullet &&bullet) { pimpl->bullets_.push_back(std::move(bullet)); }
 
-    for (const auto &bullet : _bullets)
-        bullet.draw();
+void Arena::draw(bool draw_axes) const {
+    //pimpl->boundaries_->draw(draw_axes);
 
-    player().draw();
+    const static Box plane(
+        {
+            { 0.2f, 0.2f, 0.2f, 1.0 },   
+            { 0.1f, 0.1f, 0.4f, 1.0 }, // rgb(20, 20, 143)
+            { 0.1f, 0.1f, 0.4f, 1.0 },
+            { 0.1f, 0.1f, 0.1f, 1.0 },   
+            { 32 },       
+        },
+        pimpl->width_,
+        1,
+        pimpl->depth_
+    );
+
+    // floor
+    glPushMatrix();
+        glTranslatef(width() / 2, -.5, 0);
+        plane.draw(draw_axes);
+    glPopMatrix();
+
+    // ceiling
+    glPushMatrix();
+        glTranslatef(width() / 2, pimpl->height_ + .5f, 0);
+        plane.draw(draw_axes);
+    glPopMatrix();
+
+    // win wall
+    glPushMatrix();
+        glTranslatef(pimpl->width_ + .5f, pimpl->height_ / 2, 0);
+        glRotatef(90, 0, 0, 1);
+        //glRotatef(90, 1, 0, 0);
+        plane.draw(draw_axes);
+    glPopMatrix();
+
+    // right wall
+    glPushMatrix();
+        glTranslatef(width() / 2, pimpl->depth_, pimpl->depth_ / 2 + .5f);
+        glRotatef(90, 1, 0, 0);
+        glScalef(2, 2, 2);
+        plane.draw(draw_axes);
+    glPopMatrix();
+
+    // left wall
+    glPushMatrix();
+        glTranslatef(width() / 2, pimpl->depth_, -pimpl->depth_ / 2 - .5f);
+        glRotatef(90, 1, 0, 0);
+        glScalef(2, 2, 2);
+        plane.draw(draw_axes);
+    glPopMatrix();
+    
+
+    for (const Platform &platform : pimpl->platforms_)
+        platform.draw(draw_axes);
+    
+    for (const Character &foe : pimpl->foes_)
+        foe.draw(draw_axes);
+    
+    for (const auto &bullet : pimpl->bullets_)
+        bullet.draw(draw_axes);
+
+    player().draw(draw_axes);
 }
 
 float Arena::loadFrom(const char *path) {
@@ -68,14 +135,16 @@ float Arena::loadFrom(const char *path) {
             backgroundSvgX = element->FloatAttribute("x");
             backgroundSvgY = element->FloatAttribute("y");
 
-            backgroundSvgToWindowHeightFactor = (float)_height / backgroundSvgHeight;
+            backgroundSvgToWindowHeightFactor = (float)pimpl->height_ / backgroundSvgHeight;
 
-            _width = backgroundSvgWidth * backgroundSvgToWindowHeightFactor;
+            pimpl->width_ = backgroundSvgWidth * backgroundSvgToWindowHeightFactor;
+            pimpl->depth_ = pimpl->height_ / 2.0f;
 
-            _background = new Platform(
-                .0f, .0f,
-                _height, _width,
-                ColorRgb((uint8_t)66, 66, 240)
+            pimpl->boundaries_ = new Boundary(
+                0, 0, 0,
+                pimpl->width_,
+                pimpl->height_,
+                pimpl->depth_
             );
 
             std::cout
@@ -89,19 +158,18 @@ float Arena::loadFrom(const char *path) {
                 << ", "
                 << backgroundSvgHeight
                 << ")"
-                << " Transformed to (0, 0)bl with dimensions ("
-                << _width
+                << " Transformed to (0, 0, 0)bl with dimensions ("
+                << pimpl->width_
                 << ", "
-                << _height
+                << pimpl->height_
+                << ", "
+                << pimpl->depth_
                 << ")"
             << std::endl << std::endl;
 
             break;
         }
     }
-
-    if (_background == nullptr)
-        return 0;
 
     for (const tinyxml2::XMLElement *element = svg->FirstChildElement();
          element != nullptr; element = element->NextSiblingElement()) {
@@ -117,12 +185,13 @@ float Arena::loadFrom(const char *path) {
             // because arena's origin is (0, 0) as the instance of Background Platform
             float svgToArenaX = (x - backgroundSvgX) * backgroundSvgToWindowHeightFactor;
             float svgToArenaY = (backgroundSvgHeight - (y - backgroundSvgY + h)) * backgroundSvgToWindowHeightFactor;
+            float svgToArenaZ = .0;
             
-            _platforms.push_back(Platform(
-                svgToArenaX, svgToArenaY,
-                h * backgroundSvgToWindowHeightFactor,
+            pimpl->platforms_.push_back(Platform(
+                svgToArenaX, svgToArenaY, svgToArenaZ,
                 w * backgroundSvgToWindowHeightFactor,
-                ColorRgb((uint8_t)92, 58, 10)
+                h * backgroundSvgToWindowHeightFactor,
+                pimpl->depth_
             ));
 
             std::cout
@@ -155,18 +224,18 @@ float Arena::loadFrom(const char *path) {
             float svgToArenaY = (backgroundSvgHeight - (cy - backgroundSvgY + r)) * backgroundSvgToWindowHeightFactor;
 
             float characterHeight = 2 * r * backgroundSvgToWindowHeightFactor;
-            float characterWidth = characterHeight * .34f;
+            float characterWidth = characterHeight * .88f;
 
             if (element->Attribute("fill", "green"))
-                _players.push_back(Character(
-                    svgToArenaX, svgToArenaY,
-                    characterHeight, characterWidth,
+                pimpl->players_.push_back(Character(
+                    svgToArenaX, svgToArenaY, 0,
+                    characterWidth, characterHeight, 3 * characterWidth / 4,
                     ColorRgb((uint8_t)15, 189, 15)
                 ));
             else
-                _foes.push_back(Character(
-                    svgToArenaX, svgToArenaY,
-                    characterHeight, characterWidth,
+                pimpl->foes_.push_back(Character(
+                    svgToArenaX, svgToArenaY, 0,
+                    characterWidth, characterHeight, 3 * characterWidth / 4,
                     ColorRgb((uint8_t)189, 15, 15)
                 ));
 
